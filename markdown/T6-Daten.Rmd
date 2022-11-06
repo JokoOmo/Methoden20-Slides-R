@@ -37,9 +37,9 @@ Folgende Pakete werden zudem in diesem Skript verwendet:
 ```{r, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(data.table)
-library(ggpubr)
+#library(ggpubr)
 library(latex2exp)
-library(icaeDesign)
+#library(icaeDesign)
 library(here)
 library(countrycode)
 library(viridis)
@@ -169,7 +169,7 @@ Daten können folgendermaßen 'länger' gemacht werden:
 
 ```{r}
 data_long <- pivot_longer(data = data_wide,
-                          cols = one_of("2013", "2014"), 
+                          cols = any_of(c("2013", "2014")), 
                           names_to = "Jahr", 
                           values_to = "Arbeitslosenquote")
 data_long
@@ -179,7 +179,7 @@ Um Daten 'breiter' zu machen gehen wir folgendermaßen vor:
 
 ```{r}
 data_wide_neu <- pivot_wider(data = data_long,
-                             id_cols = one_of("Land"), 
+                             id_cols = any_of("Land"), 
                              names_from = "Jahr", 
                              values_from = "Arbeitslosenquote")
 data_wide_neu
@@ -188,16 +188,18 @@ data_wide_neu
 Hier eine kombinierte Anwendung:
 
 ```{r, echo=FALSE}
+DATACHECK <-fread(here("data/T6/wb_example.csv"))
+
 data_al_exp <- fread(here("data/T6/wb_example.csv")) %>%
   rename(Land=iso2c, 
          Jahr=year,
          Exporte=NE.EXP.GNFS.ZS, 
          Arbeitslosigkeit=SL.UEM.TOTL.ZS) %>%
   select(-country) %>%
-  pivot_longer(cols = one_of("Exporte", "Arbeitslosigkeit"), 
+  pivot_longer(cols = any_of(c("Exporte","Arbeitslosigkeit")),
                names_to = "Variable", 
                values_to = "Wert") %>%
-  pivot_wider(id_cols = one_of("Land", "Variable"), 
+  pivot_wider(id_cols = any_of(c("Land", "Variable")), 
               names_from = "Jahr", 
               values_from = "Wert") 
 data_al_exp
@@ -210,12 +212,12 @@ Ohne die Pipe sähe der Code so aus:
 
 ```{r, eval=FALSE}
 data_al_exp_longer <- pivot_longer(data = data_al_exp, 
-                                   cols = -one_of("Land", "Variable"), 
+                                   cols = -any_of("Land", "Variable"), 
                                    names_to = "Jahr", 
                                    values_to = "Wert")
 
 data_al_exp_tidy <- pivot_wider(data = data_al_exp_longer, 
-                                id_cols = one_of("Land", "Jahr"), 
+                                id_cols = any_of("Land", "Jahr"), 
                                 values_from = "Wert", 
                                 names_from = "Variable")
 ```
@@ -225,11 +227,11 @@ Mit `%>%` lässt sich dies kompakter und lesbarer darstellen:
 ```{r, eval=FALSE}
 data_al_exp_tidy <- data_al_exp %>%
   pivot_longer(
-    cols = -one_of("Land", "Variable"), 
+    cols = -any_of("Land", "Variable"), 
     names_to = "Jahr", 
     values_to = "Wert") %>%
   pivot_wider(
-    id_cols = one_of("Land", "Jahr"), 
+    id_cols = any_of("Land", "Jahr"), 
     values_from = "Wert", 
     names_from = "Variable")
 ```
@@ -264,8 +266,8 @@ data_bip_gini_left_join
 **Anwendung von `right_join()**
 
 ```{r}
-data_gini_bip_right_join <- right_join(data_gini, data_BIP, 
-                                       by=c("year"="Jahr", "country"="Land"))
+data_gini_bip_right_join <- right_join(data_BIP, data_gini, 
+                                       by=c("Jahr"="year", "Land"="country"))
 data_gini_bip_right_join
 ```
 
@@ -295,19 +297,19 @@ data_al_exp_tidy <- fread(here("data/T6/wb_example.csv")) %>%
          Exporte=NE.EXP.GNFS.ZS, 
          Arbeitslosigkeit=SL.UEM.TOTL.ZS) %>%
   select(-country) %>%
-  pivot_longer(cols = one_of("Exporte", "Arbeitslosigkeit"), 
+  pivot_longer(cols = any_of(c("Exporte", "Arbeitslosigkeit")), 
                names_to = "Variable", 
                values_to = "Wert") %>%
-  pivot_wider(id_cols = one_of("Land", "Variable"), 
+  pivot_wider(id_cols = any_of(c("Land", "Variable")), 
               names_from = "Jahr", 
               values_from = "Wert") %>%
   pivot_longer(
-    cols = -one_of("Land", "Variable"), 
+    cols = -any_of(c("Land", "Variable")), 
     names_to = "Jahr", 
     values_to = "Wert",
     data = .) %>%
   pivot_wider(
-    id_cols = one_of("Land", "Jahr"), 
+    id_cols = any_of(c("Land", "Jahr")), 
     values_from = "Wert", 
     names_from = "Variable",
     data = .)
@@ -329,21 +331,20 @@ head(
   2)
 ```
 
-Mit Hilfe von `one_of()` können wir Spalten über `character` ansprechen 
+Mit Hilfe von `any_of()` können wir Spalten über `character` ansprechen 
 (zudem gibt R hier keinen Fehler aus wenn eine Spalte nicht existiert, daher 
 auch der Name):
 
 ```{r}
 head(
-  select(data_al_exp_tidy, one_of("Land", "Jahr")), 
-  2)
+  select(data_al_exp_tidy, any_of(c("Land", "Jahr"))), 2)
 ```
 
-Auch der Ausschluss von Spalten funktioniert mit `one_of()`:
+Auch der Ausschluss von Spalten funktioniert mit `any_of()`:
 
 ```{r}
 head(
-  select(data_al_exp_tidy, -one_of("Land", "Jahr")), 
+  select(data_al_exp_tidy, -any_of(c("Land", "Jahr"))), 
   2)
 ```
 
@@ -351,7 +352,7 @@ Bessere Formulierung:
 
 ```{r}
 data_al_exp_selected <- data_al_exp_tidy %>%
-  select(one_of("Land", "Jahr", "Exporte"))
+  select(any_of(c("Land", "Jahr", "Exporte")))
 head(data_al_exp_selected, 2)
 ```
 
@@ -382,8 +383,8 @@ unemp_data_wb <- fread(here("data/T6/wb_unemployment.csv"),
                        ) %>%
   select(-country) %>%
   rename(country=iso2c) %>%
-  select(one_of("country", "year", "laborforce_female", 
-                "workforce_total", "population_total"))
+  select(any_of(c("country", "year", "laborforce_female", 
+                "workforce_total", "population_total")))
 ```
 
 Eine Spalte ändern:
@@ -487,7 +488,7 @@ offenheits_daten <- fread(
     Land=countrycode::countrycode(iso3c, "iso3c", "country.name.de")
     ) %>%
   select(
-    one_of("year", "Land", "trade_total_GDP", "gvnt_cons")
+    any_of(c("year", "Land", "trade_total_GDP", "gvnt_cons"))
     )
 ```
 
@@ -507,8 +508,7 @@ streudiagramm <- ggplot(
   labs(
     title = "Handelsoffenheit & Regierungsaktivität in Europa",
     caption = "Quelle: Weltbank; Daten von 1990-2017."
-    ) +
-  theme_icae() 
+    )
 streudiagramm
 ```
 
@@ -545,8 +545,7 @@ bubble_plot <- ggplot(
   labs(
     caption = "Hinweis: Größe der Blasen repräsentiert Bevölkerungsanzahl. Quelle: Gapminder."
     ) +
-  theme_icae() +
-  theme(
+    theme(
     legend.position="bottom",
     plot.caption = element_text(hjust = 0)
     )
@@ -581,8 +580,7 @@ ggplot(data = histogram_daten,
   scale_y_continuous(name = "Häufigkeit", 
                      expand = expand_scale(c(0, 0), c(0, 1))) +
   ggtitle("Histogram mit 30 Balken") + 
-  theme_icae() +
-  theme(axis.title.x = element_blank())
+   theme(axis.title.x = element_blank())
 ```
 
 Im folgenden sehen Sie auch den großen Effekt unterschiedlicher Balkendicken:
@@ -597,10 +595,10 @@ for (i in 1:length(bin_size)){
   scale_y_continuous(name = "Häufigkeit", 
                      expand = expansion(c(0, 0), c(0, 1))) +
   ggtitle(paste0("Histogram mit ", bin_size[i], " Balken")) + 
-  theme_icae() +
+  
   theme(axis.title.x = element_blank())
 }
-ggarrange(plotlist = hist_list, ncol = 2, nrow = 2)
+#ggarrange(plotlist = hist_list, ncol = 2, nrow = 2)
 ```
 
 
@@ -634,7 +632,5 @@ ggplot(data = exportzusammensetzung,
   xlab("Produktkomplexität") +
   scale_y_continuous(limits = c(0, 0.62), expand = c(0, 0)) +
   scale_x_continuous(limits = c(-3, 3), expand = c(0, 0)) +
-  scale_color_icae(palette = "mixed", aesthetics = c("color", "fill")) +
-  theme_icae() +
-  theme(legend.position = c(0.175, 0.8))
+     theme(legend.position = c(0.175, 0.8))
 ```
